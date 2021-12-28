@@ -1,0 +1,57 @@
+---
+title: "Dummy homework"
+author: "Name, student number"
+output:
+  bookdown::pdf_document2:
+    number_sections: no
+    toc: no
+---
+Here is a simple R Markdown template for returning homework exercises. Notice that use of R Markdown is not compulsory.
+
+- Template includes some basic examples about code blocks, equations, figures and cross-referencing.
+
+- Rmd file can be compiled with the key combination Ctrl+Shift+K or by pressing the \texttt{Knit} button on R Studio interface.
+
+- Code chunk can be inserted with the key combination Ctrl+Alt+I or by pressing the \texttt{Insert} button on R Studio interface.
+
+- Equations work very similarly to LaTeX. However, cross-referencing differs significantly from LaTeX syntax.
+
+- Notice that cross-referencing is not provided in base R Markdown. [\textcolor{blue}{Bookdown}](https://github.com/rstudio/bookdown) package provides output formats which enable cross-referencing.
+
+- More information and examples about R Markdown can be found [\textcolor{blue}{here}](https://bookdown.org/yihui/rmarkdown/) and [\textcolor{blue}{here}](https://bookdown.org/yihui/rmarkdown-cookbook/).
+
+# Dummy exercise 
+## Code blocks 
+Below is an example code block.
+
+```{r}
+emis <- read.table('emissions.txt', header = TRUE, sep = '\t', row.names = 1)
+fit <- lm(NOx ~ ., data = emis)
+head(emis)
+```
+
+## Equations and inline R code 
+Value of the *coefficient of determination* is approximately $R^2 \approx$ `r round(summary(fit)$r.squared, 2)`. Previous value was actually computed with inline R command (see Rmd file)! Coefficient of determination can be calculated with the formula
+
+$$
+R^2 = 1 - \frac{SSE}{SST}.
+$$
+
+Additionally, one can have numbered equations and cross-reference them,
+\begin{equation}
+(\#eq:rsquared)
+R^2 = 1 - \frac{SSE}{SST}.
+\end{equation}
+Coefficient of determination $R^2$ is calculated according to equation \@ref(eq:rsquared).
+
+## Plotting
+Notice that labeled text is quite useful for making clean figure captions (see Rmd file).
+
+(ref:captionscatter) Scatter plot of variables.
+
+```{r scatter, fig.cap='(ref:captionscatter)'}
+pairs(emis, pch = 19, col = "midnightblue", gap = 0,
+      upper.panel = NULL, cex.labels = 1)
+```
+
+Figure \@ref(fig:scatter) suggests that there is negative correlation between variables \texttt{NOx} and \texttt{Humidity}.
