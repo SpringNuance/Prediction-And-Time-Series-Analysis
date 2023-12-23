@@ -1,0 +1,119 @@
+---
+title: "Prediction and Time Series Computer Exercise Week 4"
+author: 'Name: Nguyen Xuan Binh Student ID: 887799'
+date: "11/25/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+Exercise 4.3: 
+A time series of carbon dioxide measurements from the Mauna Loa volcano is given in
+the file MLCO2.txt. The length of the time series is 216 months. Recall that, we studied
+this time series during the third computer exercises.
+a) Using SARIMA processes, find the best possible model to describe the time series
+MLCO2.
+
+```{r}
+library(forecast) # Run every time you want to use functions of the forecast package
+
+MLCO2 <- read.table("MLCO2.txt",header=T)
+
+mlco2ts <- ts(MLCO2$MLCO2, frequency = 1)
+
+
+plot(mlco2ts, xlab = "Month" ,ylab = "CO2 measurements", main = "CO2 measurements from Mauna Loa volcano")
+
+```
+According to the time series, the CO2 measurements display seasonality and also a regular upward trend. We will now test which time series model will fit best by studying the time series' ACF and PACF
+```{r}
+par(mfrow=c(1,2),mar=c(2.5,2.5,3.5,1.5))
+acf(mlco2ts,main="ACF", lag.max=50) 
+pacf(mlco2ts,main="PACF", lag.max=50) 
+```
+Analysis: The time series is seasonal 
+ACF decays exponentially (although it may appear as linear decay at first 50 lags) along the seasonal lags and PACF has cut off at lag 2. The sample PACF with lags 4, 5, 8, 9, 12, 13 reach over the blue lines indicating
+statistical significance => AR(2) should be a component of SARIMA model. Now we use auto sarima model on the time series. 
+
+```{r}
+model_mlco2 <- auto.arima(mlco2ts)
+model_mlco2
+```
+From the auto.arima function, it needs first order differencing of non-seasonal component in order to remove the linearly upward trend of the time series. Also, AR(2) is present in the prediction
+=> SARIMA(2, 1, 1)(P, H, Q)[12] is a candidate. We will try the auto.arima function for the time series of frequency = 12
+
+```{r}
+mlco2SeasonTs <- ts(MLCO2$MLCO2, frequency = 12)
+model_mlco2Season <- auto.arima(mlco2SeasonTs)
+model_mlco2Season
+```
+The auto model predict with the order part of (0,1,2). I will choose this ordering to be seasonal order instead.
+The candidate model now is SARIMA(2,1,1)(0,1,2)[12]. We need to verify if it is correct model
+```{r}
+modelSARIMA <- Arima(mlco2ts,order=c(2,1,1), seasonal=list(order=c(0,1,2),periodc=12))
+par(mfrow=c(1,2),mar=c(2.5,2.5,3.5,1.5))
+acf(modelSARIMA$res,main="ACF of residuals",lag.max=50)
+pacf(modelSARIMA$res, main="PACF of residuals", lag.max=50)
+```
+There are about 3 significant value in residual ACF and 3 significant values in residual PACF, which is few compared to the large number of sample data. It could be a sign that this SARIMA model is correct
+Now we utilize Ljung Box test
+Number of fitted parameters: k = 2+1+2 = 5
+```{r}
+k <- 5
+mlco2_bl <- rep(NA,47)
+for (i in 1:47) {
+  mlco2_bl[i]=Box.test(modelSARIMA$res,lag=(i+k),fitdf=k, type="Ljung-Box")$p.value
+}
+round(mlco2_bl, 3)
+which(mlco2_bl < 0.05)
+```
+There are no p-values of the SARIMA model residuals that is smaller than 0.05 in the Ljung-Box test
+=> The null hypothesis of Ljung-Box is rejected. The SARIMA(2, 1, 1)(0, 1, 2)[12] will be chosen as the model for future prediction. Now we compare original time series and the SARIMA fit model
+Checking if the SARIMA model fits into the original time series, we can see that SARIMA model approximates the time series quite close
+
+```{r}
+fit.mlco2 <- fitted(modelSARIMA)
+
+plot(fit.mlco2,type="b",col="blue", ylab="CO2 measurements",xlab="Month", main="CO2 measurements from Mauna Loa volcano")
+
+lines(mlco2ts,col="red",type="b")
+legend(120,16, legend=c("Original time series", "SARIMA fit"),
+col=c("red","blue"),lty=c(1,1),cex=0.8)
+
+```
+b) Make 2 and 24 time step predictions by using the model chosen in a). Study the
+goodness of the predictions
+2 time step predictions by using the model in a)
+```{r}
+currentSARIMA = arima(mlco2ts[1:216],order=c(2,1,1), seasonal=list(order=c(0,1,2),period=12) )
+prediction2steps <-forecast(currentSARIMA,h=2,level=FALSE)$mean
+
+plot(mlco2ts,col="red",type="b",
+     ylab="CO2 measurements",xlab="Months",main="CO2 measure: 2 step prediction")
+lines(prediction2steps,col="blue",type="b")
+
+```
+
+24 time step predictions by using the model in a)
+```{r}
+currentSARIMA = arima(mlco2ts[1:216],order=c(2,1,1), seasonal=list(order=c(0,1,2),period=12) )
+prediction2steps <-forecast(currentSARIMA,h=24,level=FALSE)$mean
+
+plot(mlco2ts,col="red",type="b", xlim=c(0, 250), ylim =c(10,40),
+     ylab="CO2 measurements",xlab="Months",main="CO2 measure: 24 step prediction")
+lines(prediction2steps,col="blue",type="b")
+
+```
+
+```{r}
+currentSARIMA = arima(mlco2ts[1:216],order=c(2,1,1), seasonal=list(order=c(0,1,2),period=12) )
+prediction2steps <-forecast(currentSARIMA,h=100,level=FALSE)$mean
+
+plot(mlco2ts,col="red",type="b", xlim=c(0, 320), ylim =c(10,45),
+     ylab="CO2 measurements",xlab="Months",main="CO2 measure: 100 step prediction")
+lines(prediction2steps,col="blue",type="b")
+
+```
+We can see that prediction of SARIMA(2,1,1)(0,1,2)[12] is quite good in predicting the future of amount of CO2, since this model has passed the Ljung-Box test. Therefore, I believe the prediction for time steps of 2 and 24 are likely to be correct under this SARIMA model
+
+
